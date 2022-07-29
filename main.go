@@ -7,7 +7,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	"github.com/kailash360/BookStore-Backend/controllers/bookController"
+	"github.com/kailash360/BookStore-Backend/controllers/basicController"
+	"github.com/kailash360/BookStore-Backend/router/api"
 	"github.com/kailash360/BookStore-Backend/utils"
 )
 
@@ -23,11 +24,11 @@ func main() {
 	//Add the router
 	router := mux.NewRouter()
 
-	router.HandleFunc("/", bookController.GetBooks).Methods("GET")
-	router.HandleFunc("/{id}", bookController.GetBook).Methods("GET")
-	router.HandleFunc("/", bookController.AddBook).Methods("POST")
-	router.HandleFunc("/{id}", bookController.UpdateBook).Methods("PUT")
-	router.HandleFunc("/{id}", bookController.DeleteBook).Methods("DELETE")
+	router.HandleFunc("/", basicController.HandleHome)
+
+	//Handling routes for apis
+	apiRouter := router.PathPrefix("/api").Subrouter()
+	api.Route(apiRouter)
 
 	fmt.Println("Server started successfully!!")
 	log.Fatal(http.ListenAndServe(":8080", router))
