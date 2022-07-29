@@ -7,11 +7,16 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func Connect() *mongo.Client {
+var database *mongo.Database
+
+func Connect() {
+	godotenv.Load(".env")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URI")))
@@ -21,8 +26,14 @@ func Connect() *mongo.Client {
 		panic(err)
 	}
 
-	client.Database("Cluster0")
+	database = client.Database(os.Getenv("MONGO_DATABASE_NAME"))
 	fmt.Println("Connected to database successfully")
 
-	return client
+}
+
+func GetClient() *mongo.Database {
+	if database == nil {
+		Connect()
+	}
+	return database
 }
