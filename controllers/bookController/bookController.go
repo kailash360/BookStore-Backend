@@ -3,6 +3,7 @@ package bookController
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -97,6 +98,7 @@ func AddBook(response http.ResponseWriter, request *http.Request) {
 	database := utils.GetClient()
 	inserted, err := database.Collection("books").InsertOne(context.TODO(), book)
 
+	fmt.Println("book ", book)
 	//Return response if any error is encountered
 	if err != nil {
 		_response := models.Response{Success: false, Message: err.Error()}
@@ -110,5 +112,51 @@ func AddBook(response http.ResponseWriter, request *http.Request) {
 	_response := models.Response{Success: true, Data: inserted}
 
 	//Send the response
+	json.NewEncoder(response).Encode(_response)
+}
+
+func UpdateBook(response http.ResponseWriter, request *http.Request) {
+
+	//Set the response header
+	response.Header().Set("Content-Type", "application/json")
+
+	//Get the id and convert to object ID
+	id := mux.Vars(request)["id"]
+	objectId, _ := primitive.ObjectIDFromHex(id)
+
+	//Decode the response and get updated values
+	var updatedBook models.Book
+	json.NewDecoder(request.Body).Decode(&updatedBook)
+
+	//Fetch the book from the database
+	database := utils.GetClient()
+	result := database.Collection("books").FindOne(context.TODO(), bson.D{{Key: "_id", Value: objectId}})
+
+	//Decode the result
+	var book models.Book
+	result.Decode(&book)
+
+	//If book is not found, return an error
+	if book.ID == primitive.NilObjectID {
+		_response := models.Response{Success: false, Message: "Invalid book ID"}
+
+		json.NewEncoder(response).Encode(_response)
+		return
+	}
+
+	//Update the document
+	updated, err := database.Collection("books").UpdateOne(context.TODO(), bson.D{{Key: "_id", Value: objectId}}, bson.D{{Key: "$set", Value: updatedBook}})
+
+	//Handle if error is encountered
+	if err != nil {
+		_response := models.Response{Success: false, Message: err.Error()}
+		json.NewEncoder(response).Encode(_response)
+
+		log.Print("Error in updating book ID: ", id, err)
+		return
+	}
+
+	//Send the response
+	_response := models.Response{Success: true, Data: updated}
 	json.NewEncoder(response).Encode(_response)
 }
