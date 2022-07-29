@@ -160,3 +160,38 @@ func UpdateBook(response http.ResponseWriter, request *http.Request) {
 	_response := models.Response{Success: true, Data: updated}
 	json.NewEncoder(response).Encode(_response)
 }
+
+func DeleteBook(response http.ResponseWriter, request *http.Request) {
+	//set the headers
+	response.Header().Set("Content-Type", "application/json")
+
+	//Get the id and ocnvert into objectID
+	id := mux.Vars(request)["id"]
+	objectId, _ := primitive.ObjectIDFromHex(id)
+
+	//Fetch the document from the database
+	database := utils.GetClient()
+	result := database.Collection("books").FindOne(context.TODO(), bson.D{{Key: "_id", Value: objectId}})
+
+	//If document does not exists, return an error response
+	if result == nil {
+		_response := models.Response{Success: false, Message: "No document found with the given ID"}
+		json.NewEncoder(response).Encode(_response)
+
+		return
+	}
+
+	//Delete the document from the database
+	deleted, err := database.Collection("books").DeleteOne(context.TODO(), bson.D{{Key: "_id", Value: objectId}})
+
+	//Send an error response if error was encountered
+	if err != nil {
+		_response := models.Response{Success: false, Message: err.Error()}
+		json.NewEncoder(response).Encode(_response)
+
+		return
+	}
+
+	_response := models.Response{Success: true, Data: deleted}
+	json.NewEncoder(response).Encode(_response)
+}

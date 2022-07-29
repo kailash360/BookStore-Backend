@@ -27,6 +27,7 @@ func main() {
 	router.HandleFunc("/{id}", bookController.GetBook).Methods("GET")
 	router.HandleFunc("/", bookController.AddBook).Methods("POST")
 	router.HandleFunc("/{id}", bookController.UpdateBook).Methods("PUT")
+	router.HandleFunc("/{id}", bookController.DeleteBook).Methods("DELETE")
 
 	fmt.Println("Server started successfully!!")
 	log.Fatal(http.ListenAndServe(":8080", router))
