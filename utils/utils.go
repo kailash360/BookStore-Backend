@@ -10,6 +10,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/joho/godotenv"
 	"github.com/kailash360/BookStore-Backend/models"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -43,7 +45,7 @@ func GetClient() *mongo.Database {
 func GenerateJWT(user models.User) (string, time.Time) {
 
 	//Generate the expiration time
-	expirationTime := time.Now().Add(5 * time.Minute)
+	expirationTime := time.Now().Add(25 * time.Minute)
 
 	//Create the claims of the token
 	claims := &models.Claims{
@@ -61,14 +63,27 @@ func GenerateJWT(user models.User) (string, time.Time) {
 	return tokenString, expirationTime
 }
 
-func VerifyToken(tokenString string) bool {
+func VerifyToken(tokenString string) (bool, primitive.ObjectID) {
 
 	//Create the claims
 	claims := &models.Claims{}
 
+	//Populate the claims from the token
 	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return os.Getenv("JWT_SECRET"), nil
+		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
+	if err != nil {
+		log.Print(err.Error())
+		return false, primitive.NilObjectID
+	}
 
-	return err == nil
+	//Check if object ID is present in the database
+	isPresent := database.Collection("users").FindOne(context.TODO(), bson.D{{Key: "_id", Value: claims.ID}})
+
+	//If not present, return an error
+	if isPresent == nil {
+		return false, primitive.NilObjectID
+	}
+
+	return true, claims.ID
 }
