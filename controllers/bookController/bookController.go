@@ -3,7 +3,6 @@ package bookController
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -98,7 +97,6 @@ func AddBook(response http.ResponseWriter, request *http.Request) {
 	database := utils.GetClient()
 	inserted, err := database.Collection("books").InsertOne(context.TODO(), book)
 
-	fmt.Println("book ", book)
 	//Return response if any error is encountered
 	if err != nil {
 		_response := models.Response{Success: false, Message: err.Error()}
