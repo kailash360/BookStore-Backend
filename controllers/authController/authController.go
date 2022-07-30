@@ -64,3 +64,55 @@ func SignUp(response http.ResponseWriter, request *http.Request) {
 	_response := models.Response{Success: true, Data: inserted}
 	json.NewEncoder(response).Encode(_response)
 }
+
+func SignIn(response http.ResponseWriter, request *http.Request) {
+	//Set the response headers
+	response.Header().Set("Content-Type", "application/json")
+
+	//Extract the credentials from the request body
+	var credentials models.Credentials
+	json.NewDecoder(request.Body).Decode(&credentials)
+
+	//Check if the email is present in the database
+	database := utils.GetClient()
+	result := database.Collection("users").FindOne(context.TODO(), bson.D{{Key: "email", Value: credentials.Email}})
+
+	//Decode the result
+	var user models.User
+	result.Decode(&user)
+
+	//If user is not present, return an error
+	if user.ID == primitive.NilObjectID {
+		_response := models.Response{Success: false, Message: "Incorrect credentials"}
+		json.NewEncoder(response).Encode(_response)
+
+		return
+	}
+
+	//If present, compare the password
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password))
+
+	//If error is true, then hashes do not match
+	if err != nil {
+		_response := models.Response{Success: false, Message: "Incorrect password"}
+		json.NewEncoder(response).Encode(_response)
+
+		return
+	}
+
+	//If error is not found, then password is termed correct
+	//Move ahead to generate the JWT token
+	token, expirationTime := utils.GenerateJWT(user)
+
+	//Save in the cookies
+	http.SetCookie(response, &http.Cookie{
+		Name:    "token",
+		Value:   token,
+		Expires: expirationTime,
+	})
+
+	//Send the response
+	_response := models.Response{Success: true, Data: bson.M{"user": user, "token": token}, Message: "Logged in successfully"}
+	json.NewEncoder(response).Encode(_response)
+
+}

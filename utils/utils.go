@@ -7,7 +7,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/joho/godotenv"
+	"github.com/kailash360/BookStore-Backend/models"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -36,4 +38,37 @@ func GetClient() *mongo.Database {
 		Connect()
 	}
 	return database
+}
+
+func GenerateJWT(user models.User) (string, time.Time) {
+
+	//Generate the expiration time
+	expirationTime := time.Now().Add(5 * time.Minute)
+
+	//Create the claims of the token
+	claims := &models.Claims{
+		User: user,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+
+	//Declare the token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	//Create the Token
+	tokenString, _ := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	return tokenString, expirationTime
+}
+
+func VerifyToken(tokenString string) bool {
+
+	//Create the claims
+	claims := &models.Claims{}
+
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return os.Getenv("JWT_SECRET"), nil
+	})
+
+	return err == nil
 }
